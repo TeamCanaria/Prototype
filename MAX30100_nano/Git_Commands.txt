@@ -1,0 +1,4 @@
+git pull -u origin master
+git add --all
+git commit -m "Message"
+git push -u origin master
