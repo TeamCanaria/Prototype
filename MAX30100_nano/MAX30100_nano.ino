@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Use the "Serial Plotter" app from arduino IDE 1.6.7+ to plot the output
 
 #include <Wire.h>
+#include <SoftwareSerial.h>
 #include "MAX30100.h"
 
 // Tweakable parameters
@@ -47,6 +48,10 @@ int old_lp_butterworth = 0;
 int sample = 0;
 int last_sample = 0;
 
+SoftwareSerial BTserial(2, 3); // RX | TX
+// Connect the HC-06 TX to the Arduino RX on pin 2. 
+// Connect the HC-06 RX to the Arduino TX on pin 3 through a voltage divider.
+
 
 struct meanDiffFilter_t
 {
@@ -59,8 +64,10 @@ struct meanDiffFilter_t
 void setup()
 {
     Serial.begin(115200);
-
     Serial.print("Initializing MAX30100..");
+    Serial.println("Enter AT commands:");
+
+    BTserial.begin(9600);
 
     // Initialize the sensor
     // Failures are generally due to an improper I2C wiring, missing power supply
@@ -100,6 +107,18 @@ float meanDiff(float M, meanDiffFilter_t* filterValues)
 
 void loop()
 {
+  // Keep reading from HC-06 and send to Arduino Serial Monitor
+  if (BTserial.available())
+  {  
+    Serial.write(BTserial.read());
+  }
+ 
+  // Keep reading from Arduino Serial Monitor and send to HC-06
+  if (Serial.available())
+  {
+    BTserial.write(Serial.read());
+  }
+  
   last_sample = sample;
   if (micros() < tsLastPollUs || micros() - tsLastPollUs > POLL_PERIOD_US) {
     sensor.update();
@@ -116,4 +135,5 @@ void loop()
     //Serial.println(sample); 
     Serial.println(lp_butterworth_IR);
    }
+   
 }
