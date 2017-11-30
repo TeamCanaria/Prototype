@@ -49,14 +49,12 @@ int old_lp_butterworth = 0;
 int sample = 0;
 int last_sample = 0;
 
-<<<<<<< HEAD
-=======
 SoftwareSerial BTserial(2, 3); // RX | TX
 // Connect the HC-06 TX to the Arduino RX on pin 2. 
 // Connect the HC-06 RX to the Arduino TX on pin 3 through a voltage divider.
 
 
->>>>>>> d49f1c0d8c97a162a5c9ebc59e49a5cc7e1f9e5b
+
 struct meanDiffFilter_t
 {
   float values[15];
@@ -66,7 +64,7 @@ struct meanDiffFilter_t
 } filterValues;
 
 void setup()
-{
+ {
     Serial.begin(115200);
     Serial.print("Initializing MAX30100..");
     Serial.println("Enter AT commands:");
@@ -94,7 +92,7 @@ void setup()
 }
 
 float meanDiff(float M, meanDiffFilter_t* filterValues)
-{
+{ 
   float avg = 0;
 
   filterValues->sum -= filterValues->values[filterValues->index];
@@ -114,8 +112,8 @@ float meanDiff(float M, meanDiffFilter_t* filterValues)
 }
 
 void loop()
-{
-<<<<<<< HEAD
+ {
+
     // Using this construct instead of a delay allows to account for the time
     // spent sending data thru the serial and tighten the timings with the sampling
     last_sample = sample;
@@ -130,35 +128,35 @@ void loop()
         Serial.println(sample);
     }
 }
-=======
+
   // Keep reading from HC-06 and send to Arduino Serial Monitor
   if (BTserial.available())
   {  
     Serial.write(BTserial.read());
-  }
+   }
  
   // Keep reading from Arduino Serial Monitor and send to HC-06
   if (Serial.available())
   {
     BTserial.write(Serial.read());
-  }
+   }
   
   last_sample = sample;
   if (micros() < tsLastPollUs || micros() - tsLastPollUs > POLL_PERIOD_US) {
     sensor.update();
     tsLastPollUs = micros();
-    //sample = sensor.rawIRValue;
-    sample = sensor.rawRedValue;
+    sample = -(sensor.rawIRValue);
+    //sample = sensor.rawRedValue;
     // Apply Dc Remove
-    dc_remove_IR = (sample + 0.9666 * dc_remove_IR) - last_sample;
+    //dc_remove_IR = (sample + 0.9666 * dc_remove_IR) - last_sample;
     // Apply Mean Median Filter
     mean_median_IR = meanDiff(dc_remove_IR, &filterValues);
     // Apply Low-pass Butterworth Filter
-    lp_butterworth_IR = (2.452372752527856026e-1 * mean_median_IR) + (0.50952544949442879485 * old_lp_butterworth);
-    old_lp_butterworth = lp_butterworth_IR;
+    //lp_butterworth_IR = (2.452372752527856026e-1 * mean_median_IR) + (0.50952544949442879485 * old_lp_butterworth);
+    //old_lp_butterworth = lp_butterworth_IR;
     //Serial.println(sample); 
-    Serial.println(lp_butterworth_IR);
-   }
+    Serial.println(sample);
+    }
    
 }
->>>>>>> d49f1c0d8c97a162a5c9ebc59e49a5cc7e1f9e5b
+
