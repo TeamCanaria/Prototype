@@ -40,13 +40,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Instantiate a MAX30100 sensor class
 MAX30100 sensor;
 uint32_t tsLastPollUs = 0;
+
 int dc_remove_IR = 0;
 int mean_median_IR = 0;
 int lp_butterworth_IR = 0;
 int old_lp_butterworth = 0;
 int sample = 0;
 int last_sample = 0;
-
 
 struct meanDiffFilter_t
 {
@@ -75,6 +75,8 @@ void setup()
     // Set up the wanted parameters
     sensor.setMode(MAX30100_MODE_SPO2_HR);
     sensor.setLedsCurrent(IR_LED_CURRENT, RED_LED_CURRENT);
+//    sensor.setLedsCurrent(IR_LED_CURRENT, 0x00);
+//    sensor.setLedsCurrent(0x00, 0x00);
     sensor.setLedsPulseWidth(PULSE_WIDTH);
     sensor.setSamplingRate(SAMPLING_RATE);
     sensor.setHighresModeEnabled(HIGHRES_MODE);
@@ -88,6 +90,8 @@ float meanDiff(float M, meanDiffFilter_t* filterValues)
   filterValues->values[filterValues->index] = M;
   filterValues->sum += filterValues->values[filterValues->index];
 
+
+
   filterValues->index++;
   filterValues->index = filterValues->index % 15;
 
@@ -100,20 +104,17 @@ float meanDiff(float M, meanDiffFilter_t* filterValues)
 
 void loop()
 {
-  last_sample = sample;
-  if (micros() < tsLastPollUs || micros() - tsLastPollUs > POLL_PERIOD_US) {
-    sensor.update();
-    tsLastPollUs = micros();
-    //sample = sensor.rawIRValue;
-    sample = sensor.rawRedValue;
-    // Apply Dc Remove
-    dc_remove_IR = (sample + 0.9666 * dc_remove_IR) - last_sample;
-    // Apply Mean Median Filter
-    mean_median_IR = meanDiff(dc_remove_IR, &filterValues);
-    // Apply Low-pass Butterworth Filter
-    lp_butterworth_IR = (2.452372752527856026e-1 * mean_median_IR) + (0.50952544949442879485 * old_lp_butterworth);
-    old_lp_butterworth = lp_butterworth_IR;
-    //Serial.println(sample); 
-    Serial.println(lp_butterworth_IR);
-   }
+    // Using this construct instead of a delay allows to account for the time
+    // spent sending data thru the serial and tighten the timings with the sampling
+    last_sample = sample;
+    if (micros() < tsLastPollUs || micros() - tsLastPollUs > POLL_PERIOD_US) {
+        sensor.update();
+        tsLastPollUs = micros();
+        sample = -(sensor.rawIRValue);
+        dc_remove_IR = (sample + 0.988 * dc_remove_IR) - last_sample;
+        mean_median_IR = meanDiff(dc_remove_IR, &filterValues);
+        lp_butterworth_IR = (2.452372752527856026e-1 * mean_median_IR) + (0.50952544949442879485 * old_lp_butterworth);
+        old_lp_butterworth = lp_butterworth_IR;
+        Serial.println(sample);
+    }
 }
