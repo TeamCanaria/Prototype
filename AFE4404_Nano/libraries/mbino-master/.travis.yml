@@ -1,0 +1,33 @@
+language: python
+
+cache:
+  directories:
+  - "~/.platformio"
+
+install:
+- pip install -U platformio
+
+env:
+- PLATFORMIO_CI_SRC=examples/mbino-example-analogin
+- PLATFORMIO_CI_SRC=examples/mbino-example-analogin-pwmout
+- PLATFORMIO_CI_SRC=examples/mbino-example-assert BOARDS="all"
+- PLATFORMIO_CI_SRC=examples/mbino-example-blinky BOARDS="all"
+- PLATFORMIO_CI_SRC=examples/mbino-example-error
+- PLATFORMIO_CI_SRC=examples/mbino-example-i2c-lm75a
+- PLATFORMIO_CI_SRC=examples/mbino-example-i2c-scanner
+- PLATFORMIO_CI_SRC=examples/mbino-example-interruptin BOARDS="all"
+- PLATFORMIO_CI_SRC=examples/mbino-example-portin BOARDS="all"
+- PLATFORMIO_CI_SRC=examples/mbino-example-portout BOARDS="all"
+- PLATFORMIO_CI_SRC=examples/mbino-example-pwmout
+- PLATFORMIO_CI_SRC=examples/mbino-example-rawserial
+- PLATFORMIO_CI_SRC=examples/mbino-example-serial-hello
+- PLATFORMIO_CI_SRC=examples/mbino-example-serial-rxirq
+- PLATFORMIO_CI_SRC=examples/mbino-example-serial-stdio
+- PLATFORMIO_CI_SRC=examples/mbino-example-spi-25lc040
+- PLATFORMIO_CI_SRC=examples/mbino-example-spi-whoami
+- PLATFORMIO_CI_SRC=examples/mbino-example-ticker BOARDS="all"
+- PLATFORMIO_CI_SRC=examples/mbino-example-time
+- PLATFORMIO_CI_SRC=examples/mbino-example-timer
+
+script:
+- platformio ci --lib="." --project-conf=extras/platformio-"${BOARDS:-standard}".ini
