@@ -8,7 +8,7 @@
 
 #define LOWER_BYTE_MASK     0x000000FF
 #define SIGN_EXT            0xFF000000
-#define SIGN_MASK           0x00800000
+#define SIGN_MASK           0x00C00000 // Changed from 0x8 (0b1000) to 0xC (0b1100)
 #define BITS_PER_BYTE       8
 #define NUM_REGISTERS       40
 

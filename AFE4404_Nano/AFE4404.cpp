@@ -1,24 +1,26 @@
 #ifdef ARDUINO
 #include <Wire.h>
 #endif
-//#include <Wire.h>
+
 #include "AFE4404.h"
-//#include "i2c_t3.h"
 #include "mbed.h"
+//#include "i2c_t3.h"
 
 
 //char LED = 0x2A;
 int32_t data;
 volatile bool dataAvailable = false;
 
+/*
+AFE4404::AFE4404(PinName rxSupplyEn, PinName txSupplyEn, PinName resetz, PinName powerEn, PinName drdy, PinName clk, PinName sda, PinName scl):
 
-//AFE4404::AFE4404(PinName rxSupplyEn, PinName txSupplyEn, PinName resetz, PinName powerEn, PinName drdy, PinName clk, PinName sda, PinName scl):
-//
-//  _rxSupplyEn(rxSupplyEn), _txSupplyEn(txSupplyEn), _resetz(resetz),
-//  _powerEn(powerEn), _drdy(drdy), _clk(clk), _i2c(sda, scl) {
-//    
-//  _address = (0x58 << 1);
-//}
+  _rxSupplyEn(rxSupplyEn), _txSupplyEn(txSupplyEn), _resetz(resetz),
+  _powerEn(powerEn), _drdy(drdy), _clk(clk), _i2c(sda, scl) {
+    
+  _address = (0x58 << 1);
+}
+*/
+
 AFE4404::AFE4404(PinName resetz, PinName drdy, PinName clk, PinName sda, PinName scl):
 
   _resetz(resetz),
@@ -49,16 +51,16 @@ void AFE4404::initPorts(void) {
 void AFE4404::initPowerSupply(void) {
 
   wait_ms(100);
+/*
+  _powerEn = 1;
+  wait_ms(100);
 
-//  _powerEn = 1;
-//  wait_ms(100);
+  _rxSupplyEn = 1;
+  wait_ms(10);
 
-//  _rxSupplyEn = 1;
-//  wait_ms(10);
-
-//  _txSupplyEn = 1;
-//  wait_ms(20);
-
+  _txSupplyEn = 1;
+  wait_ms(20);
+*/
   _resetz = 0;
   wait_us(35);
 
@@ -85,6 +87,7 @@ uint32_t AFE4404::readData(uint8_t reg, bool adc = true) {
   // write the register to AFE and use repeated start mode as specified in
   // the datasheet
   _i2c.write(_address, _writeBuffer, 1, true);
+  
   // read 3 bytes of data from register MSB first
   _i2c.read(_address, _readBuffer, 3);
 
@@ -96,7 +99,6 @@ uint32_t AFE4404::readData(uint8_t reg, bool adc = true) {
   }
 
   return _tempData;
-
 }
 
 void AFE4404::writeData(uint8_t reg, uint32_t data) {
@@ -243,71 +245,77 @@ void AFE4404::initClock(void) {
 }
 
 
-//
-//void AFE4404::powerUpSequence(void) {
-//
-//  initPorts();
-//  initPowerSupply();
-//  initRegisters();
-//  initClock();
-////  _drdy.rise(this, &AFE4404::getData);
-//  enableIRQ();
-//
-//}
-//void AFE4404::getData(void) {
-//
-//  disableIRQ();
-//  data = static_cast<int32_t> (readData(LED, true));
-//  dataAvailable = true;
-//  enableIRQ();
-//}
-//uint32_t AFE4404::readData(uint8_t reg, bool adc = true) {
-//
-//  if(!adc) {
-//    enableReadMode();
-//  }
-//  
-//  writeBuffer[0] = reg;
-//
-//
-// readBuffer[0] = 0x00;
-// readBuffer[1] = 0x00;
-// readBuffer[2] = 0x00;
-//
-//  Wire.beginTransmission(AFE4404_I2C_ADDRESS);
-//  Wire.write(writeBuffer[0]);
-////  Wire.write(writeBuffer, 1);
-//  
-//  
-////  Wire.write(AFE4404_I2C_ADDRESS);
-////  Wire.endTransmission(false);
-////   Wire.requestFrom((uint8_t)AFE4404_I2C_ADDRESS, 3);
-//  Wire.read(readBuffer, 3);
-//
-//  tempData = 0;
-//
-//  tempData = (readBuffer[0] << (BITS_PER_BYTE * 2)) | (readBuffer[1] << BITS_PER_BYTE) | readBuffer[2];
-//
-//  return tempData;
-//
-//}
-//void AFE4404::writeData(uint8_t reg, uint32_t data) {
-//
-//  enableWriteMode();
-//  writeBuffer[0] = reg;
-//
-//  // store the lower 3 bytes of data in writeBuffer (MSB first)
-//  for (int i=2, j = 1; i >= 0; i--, j++) {
-//    writeBuffer[j] = (data >> (BITS_PER_BYTE * i)) & LOWER_BYTE_MASK;
-//  }
-//  //write 4 bytes
-//  // 1 : register address and 3 for lower 3 bytes of data
-//  Wire.beginTransmission(AFE4404_I2C_ADDRESS);
-//  Wire.write(writeBuffer[0]); //reg
-//  Wire.write(writeBuffer[1]); //MSB
-//  Wire.write(writeBuffer[2]);
-//  Wire.write(writeBuffer[3]);
-//  Wire.endTransmission();
-//  
-//  
-//}
+/*
+void AFE4404::powerUpSequence(void) {
+
+  initPorts();
+  initPowerSupply();
+  initRegisters();
+  initClock();
+//  _drdy.rise(this, &AFE4404::getData);
+  enableIRQ();
+}
+*/
+
+/*
+void AFE4404::getData(void) {
+
+  disableIRQ();
+  data = static_cast<int32_t> (readData(LED, true));
+  dataAvailable = true;
+  enableIRQ();
+}
+*/
+
+/*
+uint32_t AFE4404::readData(uint8_t reg, bool adc = true) {
+
+  if(!adc) {
+    enableReadMode();
+  }
+  
+  writeBuffer[0] = reg;
+
+
+ readBuffer[0] = 0x00;
+ readBuffer[1] = 0x00;
+ readBuffer[2] = 0x00;
+
+  Wire.beginTransmission(AFE4404_I2C_ADDRESS);
+  Wire.write(writeBuffer[0]);
+//  Wire.write(writeBuffer, 1);
+  
+  
+//  Wire.write(AFE4404_I2C_ADDRESS);
+//  Wire.endTransmission(false);
+//   Wire.requestFrom((uint8_t)AFE4404_I2C_ADDRESS, 3);
+  Wire.read(readBuffer, 3);
+
+  tempData = 0;
+
+  tempData = (readBuffer[0] << (BITS_PER_BYTE * 2)) | (readBuffer[1] << BITS_PER_BYTE) | readBuffer[2];
+
+  return tempData;
+}
+*/
+
+/*
+void AFE4404::writeData(uint8_t reg, uint32_t data) {
+
+  enableWriteMode();
+  writeBuffer[0] = reg;
+
+  // store the lower 3 bytes of data in writeBuffer (MSB first)
+  for (int i=2, j = 1; i >= 0; i--, j++) {
+    writeBuffer[j] = (data >> (BITS_PER_BYTE * i)) & LOWER_BYTE_MASK;
+  }
+  //write 4 bytes
+  // 1 : register address and 3 for lower 3 bytes of data
+  Wire.beginTransmission(AFE4404_I2C_ADDRESS);
+  Wire.write(writeBuffer[0]); //reg
+  Wire.write(writeBuffer[1]); //MSB
+  Wire.write(writeBuffer[2]);
+  Wire.write(writeBuffer[3]);
+  Wire.endTransmission();
+}
+*/
