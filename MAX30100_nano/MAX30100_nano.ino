@@ -19,6 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <Wire.h>
 #include "MAX30100.h"
+#include "Adafruit_BLE.h"
+#include "Adafruit_BluefruitLE_SPI.h"
+#include "Adafruit_BluefruitLE_UART.h"
+
+#include "BluefruitConfig.h"
 
 // Tweakable parameters
 // Sampling and polling frequency must be set consistently
@@ -35,11 +40,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // set HIGHRES_MODE to true only when setting PULSE_WIDTH to MAX30100_SPC_PW_1600US_16BITS
 #define PULSE_WIDTH                         MAX30100_SPC_PW_1600US_16BITS
 #define HIGHRES_MODE                        true
-
+#define REPORTING_PERIOD_MS                 10        // Sample rate ms
 
 // Instantiate a MAX30100 sensor class
 MAX30100 sensor;
-uint32_t tsLastPollUs = 0;
+uint32_t tsLastReport = 0;
 
 int dc_remove_IR = 0;
 int mean_median_IR = 0;
@@ -56,12 +61,22 @@ struct meanDiffFilter_t
   byte count;
 } filterValues;
 
+/* Creating a bluefruit object using SCK/MOSI/MISO hardware SPI pins and user selected CS/IRQ/RST */
+Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_RST);
+
+//Adafruit_BluefruitLE_UART ble(Serial1, BLUEFRUIT_UART_MODE_PIN);
+
+void error(const __FlashStringHelper*err) {
+  Serial.println(err);
+  while (1);
+}
+
 void setup()
 {
     Serial.begin(115200);
 
     Serial.print("Initializing MAX30100..");
-
+    
     // Initialize the sensor
     // Failures are generally due to an improper I2C wiring, missing power supply
     // or wrong target chip
@@ -75,11 +90,19 @@ void setup()
     // Set up the wanted parameters
     sensor.setMode(MAX30100_MODE_SPO2_HR);
     sensor.setLedsCurrent(IR_LED_CURRENT, RED_LED_CURRENT);
-//    sensor.setLedsCurrent(IR_LED_CURRENT, 0x00);
-//    sensor.setLedsCurrent(0x00, 0x00);
     sensor.setLedsPulseWidth(PULSE_WIDTH);
     sensor.setSamplingRate(SAMPLING_RATE);
     sensor.setHighresModeEnabled(HIGHRES_MODE);
+
+    /* Initialise the module */
+    Serial.print(F("Initialising the Bluefruit LE module: "));
+
+    if ( !ble.begin(VERBOSE_MODE) )
+    {
+      error(F("Couldn't find Bluefruit, make sure it's in CoMmanD mode & check wiring?"));
+    }
+    Serial.println( F("OK!") );
+
 }
 
 float meanDiff(float M, meanDiffFilter_t* filterValues)
@@ -107,14 +130,17 @@ void loop()
     // Using this construct instead of a delay allows to account for the time
     // spent sending data thru the serial and tighten the timings with the sampling
     last_sample = sample;
-    if (micros() < tsLastPollUs || micros() - tsLastPollUs > POLL_PERIOD_US) {
+    //if (micros() < tsLastPollUs || micros() - tsLastPollUs > POLL_PERIOD_US) {
+    if (millis() - tsLastReport > REPORTING_PERIOD_MS) {
         sensor.update();
-        tsLastPollUs = micros();
         sample = -(sensor.rawIRValue);
-        dc_remove_IR = (sample + 0.988 * dc_remove_IR) - last_sample;
-        mean_median_IR = meanDiff(dc_remove_IR, &filterValues);
-        lp_butterworth_IR = (2.452372752527856026e-1 * mean_median_IR) + (0.50952544949442879485 * old_lp_butterworth);
-        old_lp_butterworth = lp_butterworth_IR;
         Serial.println(sample);
+
+        /* Sending the sample data to nearby BT device */
+        ble.print("AT+BLEUARTTX=");
+        ble.println(sample);
+        tsLastReport = millis();
     }
 }
+
+
