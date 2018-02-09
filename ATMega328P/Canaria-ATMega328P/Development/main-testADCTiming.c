@@ -1,7 +1,7 @@
 /*
  *  Canaria-ATMega328P.c
  *
- *	Copyright (C) 2017  Canaria
+ *	Copyright (C) 2017  CanariaAlbert Dillon, Daniel Stojcevski, Beichen Xia
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
  *
  *	CSSE2310 Style Guide 2.0.4
  *	
- *	Credits to GitHub's g4lvanix for i2c_master.h.
- *  
+ *	Credits to GitHub's cpldcpu and g4lvanix for ws2812_config.h and
+ *	i2c_master.h respectively.
  */
 
 #define F_CPU 8000000UL
@@ -36,9 +36,11 @@
 #define TOTALLEDS 30
 #define OUTERDISPLAY 12
 #define FOSC 8000000		// Clock speed
-#define BAUD 9600
+#define BAUD 250000
 #define MYUBRR FOSC/16/BAUD-1
 #define ADCCHANNEL 0		// Also change ISR.
+#define AVERAGES 32
+#define DEBUG 1
 
 typedef enum {
 	IRADC1 = 0,
@@ -66,9 +68,10 @@ typedef enum {
 BTTxFlag btTxFlag;		/* BT Flag for transmitting multiple packets */
 SensorFlag sensorFlag;
 uint16_t tcScaler;
-uint16_t redResult;
-uint16_t ambResult;
-uint16_t irResult;
+// uint16_t redResult, ambResult, irResult;
+uint8_t adcCounter = AVERAGES;
+uint32_t averageResult;
+
 
 /*
 Writes setBit to targetBit in targetRegister on targetDeviceRead/Write.
@@ -154,6 +157,7 @@ void send_result(uint16_t output) {
 
 /* Handles ADC Interrupt Request */
 ISR(ADC_vect) {
+	/*
 	if ((sensorFlag - 1) == READRED) {
 		redResult = 0x0000;
 		redResult = ADC;
@@ -163,12 +167,14 @@ ISR(ADC_vect) {
 	} else if ((sensorFlag - 1) == READAMB) {
 		ambResult = 0x0000;
 		ambResult = ADC;
-	}
+	}*/
+	uint16_t convResult = ADC;
+	averageResult += convResult;
 	return;
 }
 
 /* Called to start sampling */
-void take_sample(uint16_t freq) {
+void start_sampling(uint16_t freq) {
 	
 	tcScaler = 8;
 	
@@ -204,17 +210,27 @@ ISR(TIMER1_COMPA_vect) {
 	} else if (sensorFlag == OFFIR) {
 		PORTD &= ~(1 << PORTD4);
 	} else if ((sensorFlag == READRED) || (sensorFlag == READAMB) || (sensorFlag == READIR)) {
-		ADCSRA |= (1 << ADSC); // Start Conversion.
+		PORTD |= (1 << PORTD3);
+		for (uint8_t i = 0; i < AVERAGES; i++) {
+			ADCSRA |= (1 << ADSC); // Start Conversion.
+			while ((1 << ADSC) & ADCSRA);
+			averageResult += ADC;
+		}
+		// adcCounter = 0;
+		PORTD &= ~(1 << PORTD3);
 	} else if (sensorFlag == RESET) {
 		sensorFlag = 0;
 		return;
-	} else if (sensorFlag == SENDRESULT) {
+	}
+	/*
+	else if (sensorFlag == SENDRESULT) {
 		send_result(redResult);
 	} else if ((sensorFlag - 5) == SENDRESULT) {
 		send_result(ambResult);
 	} else if ((sensorFlag - 10) == SENDRESULT) {
 		send_result(irResult);
 	}
+	*/
 	sensorFlag += 1;
 	return;
 }
@@ -241,6 +257,11 @@ void initialise_TC1(void) {
 	*/
 	DDRD |= (1 << PORTD2) | (1 << PORTD4);
 	PORTD &= ~((1 << PORTD2) | (1 << PORTD4));
+
+	if (DEBUG) {
+		DDRD |= (1 << PORTD3);
+		PORTD &= ~(1 << PORTD3);
+	}
 	
 	TCCR1A |= ((1 << WGM10) | (1 << COM1A0)) & ~((1 << COM1A1) |
 			(1 << COM1B1) | (1 << COM1B0) | (1 << WGM11));
@@ -266,7 +287,7 @@ void initialise_ADC(uint8_t channelADC) {
 	ADC Interrupt Flag Set
 	ADC Interrupt Enabled
 	*/
-	ADCSRA = ((1 << ADEN) | (1 << ADATE) | (1 << ADIF) | (1 << ADIE));
+	ADCSRA = ((1 << ADEN) | (1 << ADIF)); // | (1 << ADATE) | (1 << ADIF) | (1 << ADIE));
 	
 	/*
 	ADC Prescaler "/2".  (8MHz to 4MHz)
@@ -303,8 +324,8 @@ void initialise_USART(uint16_t ubrr) {
 Calls initialisation functions and sets global variables.
 */
 void initialisations(void) {
-	/* Initialise registers of the atMega328P */
-	initialise_USART(MYUBRR); /* Calculated UBRR = 15 for 500 baud */
+	/* Initialise registers of the ATMega328P */
+	initialise_USART(MYUBRR); /* Calculated UBRR = 15 for 115200 baud */
 	initialise_TC1();
 	initialise_ADC(ADCCHANNEL);
 	sei(); // Enable global interrupts.
@@ -317,10 +338,33 @@ void initialisations(void) {
 
 int main(void) {
 	initialisations(); // Sets registers for operation.
-	take_sample(100);
+	start_sampling(100);
 	while(1) {
+		/*
+		if (adcCounter < AVERAGES) {
+			ADCSRA |= (1 << ADSC); // Start Conversion.
+			adcCounter += 1;
+			while ((1 << ADSC) & ADCSRA);
+		}
+		if (1 || (adcCounter >= AVERAGES)) {
+			PORTD &= ~(1 << PORTD3);
+		}
+		*/
 		_delay_ms(1000);
 	}
-	
 	return 0;
 }
+
+/*
+Timer Counter ISR:
+Start first conversion.
+Reset global counter.
+DEBUG: Signal a GPIO to low.
+
+ADC ISR:
+Add ADC value to global averages.
+Increment global counter.
+Compare to 16/32/64.
+DEBUG: When compared, signal a GPIO pin to high.
+
+*/
