@@ -11,7 +11,7 @@
 
 /************VARIABLES******************/
 //const int LED_PIN = 4;
-const int RED_LED = 4;
+const int RED_LED = 16;
 const int GREEN_LED = 5;
 const int ADC_PIN = 17; // A3 on Arduino Nano
 uint32_t tsLastPollUs = 0;
